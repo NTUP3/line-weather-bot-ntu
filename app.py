@@ -230,7 +230,7 @@ def sendBroadcastMessage():
                             locations_msg = [loc.get("locationName", "") for loc in hazard["info"]["affectedAreas"]["location"]]
                         if not locations_msg:
                             locations_msg = ["無數據"]
-                        message_text = (f"⚠️ 最新{phenomenon}特報 ⚠️\n{content_text}\n\n"
+                        message_text = (f"【 🌧️ {phenomenon}特報及時訊息 】\n{content_text}\n\n"
                                         f"特報發佈時間：{update_time}\n\n"
                                         f"📍 {phenomenon}特報地區：\n" + "\n".join(locations_msg))
                         warning_messages.append(message_text)
