@@ -115,24 +115,23 @@ def sendBroadcastMessage():
             print("時間格式錯誤，重置 update")
             last_update_time = now - datetime.timedelta(hours=3)
 
-    # 計算時間差（現在 - 上次發送時間）
-    # time_diff = (now - last_update_time).total_seconds() / 60  # 轉換為分鐘
+    # 計算時間差（現在 - 上次更新時間），單位：分鐘
+    time_diff = (now - last_update_time).total_seconds() / 60
 
-    # 判斷 lastSentTime 是否在過去 30 分鐘內
-    # if last_sent_time:
-    #     try:
-    #         last_sent_time = datetime.datetime.strptime(last_sent_time, "%Y-%m-%d %H:%M:%S")
-    #         last_sent_time = last_sent_time.replace(tzinfo=tz_tw)
-    #         last_sent_diff = (now - last_sent_time).total_seconds() / 60  # 轉換為分鐘
-
-    #         if last_sent_diff <= 30:
-    #             print("過去已發送過警報，不重複發送")
-    #             # 更新 lastSentTime
-    #             last_sent_info.update({"lastSentTime": formatted_now})
-    #             script_properties.set_property("lastSentInfo", last_sent_info)
-    #             return
-    #     except ValueError:
-    #         print("lastSentTime 時間格式錯誤，無法進行比較")
+    # 檢查 lastSentTime 是否在過去 30 分鐘內
+    if last_sent_time:
+        try:
+            last_sent_time = datetime.datetime.strptime(last_sent_time, "%Y-%m-%d %H:%M:%S")
+            last_sent_time = last_sent_time.replace(tzinfo=tz_tw)
+            last_sent_diff = (now - last_sent_time).total_seconds() / 60
+            if last_sent_diff <= 30:
+                print("過去已發送過警報，不重複發送")
+                # 更新 lastSentTime
+                last_sent_info.update({"lastSentTime": formatted_now})
+                script_properties.set_property("lastSentInfo", last_sent_info)
+                return
+        except ValueError:
+            print("lastSentTime 時間格式錯誤，無法進行比較")
 
     # 更新 lastSentTime
     last_sent_info.update({"lastSentTime": formatted_now})
@@ -188,7 +187,22 @@ def sendBroadcastMessage():
                 phenomena = "無數據"
                 locations = ["無數據"]
 
-            # 比對舊的與新的警報區域，若先前的 weatherData 有設定過 location，則進行比對
+            # 將 lastSentTime、phenomena、location、issueTime 與 update 存入 script_properties.json
+            weather_info = {
+                "lastSentTime": formatted_now,
+                "phenomena": phenomena,
+                "location": locations,
+                "issueTime": issueTime,
+                "update": update_time
+            }
+            script_properties.set_property("weatherData", weather_info)
+
+            # 新增檢查：如果現有警報的 phenomena 為 "無數據"，僅更新設定後，不發送訊息警報
+            if phenomena == "無數據":
+                print("警報現象為 '無數據'，僅更新設定，不發送訊息警報")
+                return
+
+            # 比對舊的與新的警報區域（若先前的 weatherData 有設定過 location）
             old_locations = weatherData.get("location", [])
             if old_locations:
                 added_locations = list(set(locations) - set(old_locations))
@@ -203,16 +217,6 @@ def sendBroadcastMessage():
                 if change_message:
                     # 將變化訊息放在警報訊息的最前面
                     warning_messages.insert(0, change_message)
-
-            # 將 lastSentTime、phenomena、location、issueTime 與 update 存入 script_properties.json
-            weather_info = {
-                "lastSentTime": formatted_now,
-                "phenomena": phenomena,
-                "location": locations,
-                "issueTime": issueTime,
-                "update": update_time
-            }
-            script_properties.set_property("weatherData", weather_info)
 
             # 解析所有符合條件的警報訊息
             for record in records:
@@ -283,23 +287,23 @@ def sendBroadcastMessage():
             break
 
         attempt_time = attempt_time - datetime.timedelta(minutes=10)
-        
+
     # 將所有警報文字訊息合併成一個
     if warning_messages:
         combined_warning_text = "\n\n".join(warning_messages)
     else:
         combined_warning_text = ""
-    
+
     # 取得累積雨量報告訊息（回傳字串）
     rainfall_report_text = getMaximumAccumulatedRainfallReport()
-    
+
     # 將兩個文字訊息合併
     if combined_warning_text and rainfall_report_text:
         final_text = combined_warning_text + "\n\n" + rainfall_report_text
     else:
         final_text = combined_warning_text or rainfall_report_text
 
-    # 新增檢查：若接收到的大雨特報內容與上次儲存的內容完全一致，則不發送訊息
+    # 若接收到的特報內容與上次儲存的內容完全一致，則不重複發送訊息
     lastMessage = script_properties.get_property("lastMessage")
     if isinstance(lastMessage, str) and lastMessage == final_text:
         print("大雨特報內容未變化，不重複發送訊息")
@@ -311,7 +315,7 @@ def sendBroadcastMessage():
     messages = []
     if final_text:
         messages.append({"type": "text", "text": final_text})
-    
+
     # 若有圖片，也照原本方式加入
     if warning_image_url:
         messages.append({
@@ -331,13 +335,14 @@ def sendBroadcastMessage():
             "originalContentUrl": warning_image_url,
             "previewImageUrl": warning_image_url
         })
-    
+
     message_payload = {
         "to": GROUP_ID,
         "messages": messages
     }
-    
+
     sendLineMessage(message_payload)
+
 
 
 
