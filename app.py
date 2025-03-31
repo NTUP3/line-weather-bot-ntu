@@ -75,7 +75,6 @@ script_properties = ScriptProperties()
 # 主函式：檢查天氣 API 資料、組合警報訊息、查找圖片並發送 LINE 訊息
 # --------------------------
 
-
 def sendBroadcastMessage():
     # 取得現在時間
     now = datetime.datetime.now(tz_tw)
@@ -311,17 +310,22 @@ def sendBroadcastMessage():
     # 更新儲存的訊息內容
     script_properties.set_property("lastMessage", final_text)
 
+    # 加入防快取動態參數
+    timestamp = int(time.time())
+    # 將固定的警報圖片 URL 加上時間戳記參數，避免 LINE 快取過期圖片
+    warning_static_url = f"https://www.cwa.gov.tw/Data/warning/W26_C.png?ts={timestamp}"
+
     # 建構 LINE 訊息內容
     messages = []
     if final_text:
         messages.append({"type": "text", "text": final_text})
 
-    # 若有圖片，也照原本方式加入
+    # 使用帶動態參數的 URL 傳送警報圖片
     if warning_image_url:
         messages.append({
             "type": "image",
-            "originalContentUrl": "https://www.cwa.gov.tw/Data/warning/W26_C.png?",
-            "previewImageUrl": "https://www.cwa.gov.tw/Data/warning/W26_C.png?"
+            "originalContentUrl": warning_static_url,
+            "previewImageUrl": warning_static_url
         })
     if radar_image_url:
         messages.append({
@@ -342,6 +346,7 @@ def sendBroadcastMessage():
     }
 
     sendLineMessage(message_payload)
+
 
 
 
