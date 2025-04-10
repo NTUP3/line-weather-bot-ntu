@@ -117,20 +117,6 @@ def sendBroadcastMessage():
     # 計算時間差（現在 - 上次更新時間），單位：分鐘
     time_diff = (now - last_update_time).total_seconds() / 60
 
-    # 檢查 lastSentTime 是否在過去 30 分鐘內
-    if last_sent_time:
-        try:
-            last_sent_time = datetime.datetime.strptime(last_sent_time, "%Y-%m-%d %H:%M:%S")
-            last_sent_time = last_sent_time.replace(tzinfo=tz_tw)
-            last_sent_diff = (now - last_sent_time).total_seconds() / 60
-            if last_sent_diff <= 30:
-                print("過去已發送過警報，不重複發送")
-                # 更新 lastSentTime
-                last_sent_info.update({"lastSentTime": formatted_now})
-                script_properties.set_property("lastSentInfo", last_sent_info)
-                return
-        except ValueError:
-            print("lastSentTime 時間格式錯誤，無法進行比較")
 
     # 更新 lastSentTime
     last_sent_info.update({"lastSentTime": formatted_now})
