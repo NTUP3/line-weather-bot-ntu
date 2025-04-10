@@ -287,12 +287,13 @@ def sendBroadcastMessage():
         final_text = combined_warning_text + "\n\n" + rainfall_report_text
     else:
         final_text = combined_warning_text or rainfall_report_text
-
-    # 若接收到的特報內容與上次儲存的內容完全一致，則不重複發送訊息
-    lastMessage = script_properties.get_property("lastMessage")
-    if isinstance(lastMessage, str) and lastMessage == final_text:
-        print("大雨特報內容未變化，不重複發送訊息")
+      
+    # 根據 update 判斷是否為新資料
+    last_sent_update_time = weatherData.get("update")
+    if last_sent_update_time == update_time:
+        print("特報 update 時間未更新，不重複發送訊息")
         return
+      
     # 更新儲存的訊息內容
     script_properties.set_property("lastMessage", final_text)
 
